@@ -25,6 +25,9 @@ from tkinter import *
 from tkinter import ttk
 import inspect
 from typing import Union, get_args, get_origin
+from enum import EnumMeta, Enum, IntEnum, Flag, IntFlag
+
+import gui_component as gui
 
 
 def pggui(name=None):
@@ -39,7 +42,7 @@ def pggui(name=None):
 def load_funcs(component):
     """
     Modeled off of robotlibcore's add_library_components
-    :param component: A module or an instance of a class, containing functions or methods to be potentially tuned into GUIs
+    :param component: A module or an instance of a class, containing callables to be potentially tuned into GUIs
     :return: A list containing any functions which are flagged to be turned into a GUI
     """
     funcs = []
@@ -85,49 +88,28 @@ class Application(ttk.Frame):
         super().__init__(master)
         self.master = master
         self.grid(row=0, column=0)
-        self.create_widgets()
-        self.bcount = 1
+        self.init_gui()
 
-    def add_button(self, text, command):
-        btn = ttk.Button(self, text=text, command=command)
-        btn.pack(side="top")
+    def init_gui(self):
+        # Header
+        self.header = gui.ComboBoxBlock(self, 'Select A Function To Run', {'One': 1, 'Two': 2, 'Three': 3})
+        self.header.grid(row=1, column=0)
 
-    def add_cbutton(self):
-        # self.add_button(str(self.bcount) * 10, self.add_cbutton)
-        self.add_button(str(self.ti.get_value()) * 10, self.add_cbutton)
-        self.bcount += 1
+        # Function GUI
+        self.ti = gui.TextInputBlock(self, 'blah')
+        self.ti.grid(row=2, column=0)
+        self.ti = gui.TextInputBlock(self, 'blah2')
+        self.ti.grid(row=3, column=0)
+        self.chk = gui.BoolInputBlock(self, 'CHK')
+        self.chk.grid(row=4, column=0)
 
-    def create_widgets(self):
-        self.hi_there = ttk.Button(self)
-        self.hi_there["text"] = "Hello World\n(click me)"
-        self.hi_there.grid(row=0, column=0)
+        # Footer
+        # Quit Button
         self.quit = ttk.Button(self, text="QUIT", command=self.master.destroy)
-        self.btn_run = ttk.Button(self, text='RUN', command=None)
-        self.ti = TextInputSection(self, 'blah')
-        self.ti.grid(row=1, column=0)
-        self.btn_run.grid(row=998, column=999)
         self.quit.grid(row=999, column=999)
-
-
-    def say_hi(self):
-        print("hi there, everyone!")
-
-
-class TextInputSection(ttk.Frame):
-    def __init__(self, parent: ttk.Frame, text: str):
-        super().__init__(parent)
-        self.frame = ttk.Frame(parent)
-        self.frame.grid(padx=5, pady=5)
-        self.lbl = ttk.Label(self.frame, text=text, anchor='nw', wraplength=600)
-        self.entry = ttk.Entry(self.frame, width=80)
-        self.grid_items()
-
-    def grid_items(self):
-        self.lbl.grid(row=0, sticky='w')
-        self.entry.grid(row=1, column=0, columnspan=2, sticky='w')
-
-    def get_value(self):
-        return self.entry.get()
+        # Run Button
+        self.btn_run = ttk.Button(self, text='RUN', command=None)
+        self.btn_run.grid(row=998, column=999)
 
 root = Tk()
 app = Application(master=root)

@@ -31,26 +31,47 @@ class ParamInputFrame(ttk.Frame):
         super().__init__(parent)
         # Base Frame
         self.frame = ttk.Frame(parent)
-        self.frame.grid(padx=5, pady=5, sticky='w')
         # Entry Label
         self.lbl = ttk.Label(self.frame, text=entry_description, anchor='nw', wraplength=450)
 
+    def place(self, row=0, column=0, padx=5, pady=5, sticky='w'):
+        self.frame.grid(row=row, column=column, padx=padx, pady=pady, sticky=sticky)
+
 
 class ComboBoxBlock(ParamInputFrame):
-    def __init__(self, parent: ttk.Frame, entry_description: str, source: Union[dict, EnumMeta]):
+    def __init__(self, parent: ttk.Frame, entry_description: str,
+                 source: Union[dict, EnumMeta, list], on_select = None):
+        """
+        Combo Box input frame.
+        :param parent: Parent Frame
+        :param entry_description: Text to display at top of frame
+        :param source: A dictionary, enum, or list to generate items from
+        :param on_select: f(c: ComboBoxBlock) to call when selection is updated
+        """
         super().__init__(parent, entry_description)
         # ComboBox
         self.selection = StringVar()
-        self._source = source
+        if type(source) is list:
+            s = {}
+            for item in source:
+                s[str(item)] = item
+            self._source = s
+        elif type(source) is EnumMeta:
+            s = {}
+            for item in source:
+                s[item.name] = item
+            self._source = s
+        else:
+            self._source = source
+        assert type(self._source) is dict, f'Could not convert source to dict: {type(self._source)}'
         self.combobox = ttk.Combobox(self.frame, textvariable=self.selection)
+        self.on_select = on_select
+        self.combobox.bind('<<ComboboxSelected>>', self._on_select)
+        self.combobox.bind('<FocusOut>', self._on_select)
         # Set up default values and whether to allow manual entry
-        if type(self._source) is EnumMeta:
-            self.combobox['values'] = [x.name for x in self._source]
+        self.combobox['values'] = [x for x in self._source if x != '_manual']
+        if '_manual' not in self._source:
             self.combobox.state(['readonly'])
-        elif type(self._source) is dict:
-            self.combobox['values'] = [x for x in self._source]
-            if '_manual' not in self._source:
-                self.combobox.state(['readonly'])
         self.grid_items()
 
     def grid_items(self):
@@ -58,7 +79,22 @@ class ComboBoxBlock(ParamInputFrame):
         self.combobox.grid(row=1, column=0, columnspan=2, sticky='w')
 
     def get_value(self):
-        return self._source[str(self.selection)]
+        try:
+            return self._source[str(self.selection.get())]
+        except KeyError:
+            try:
+                return self._source['_manual'](self.selection.get())
+            except ValueError:
+                raise ValueError(f'Invalid Input: {self.selection.get()}')
+
+    def _on_select(self, e):
+        if self.on_select is not None:
+            try:
+                self.on_select(self.get_value())
+            except ValueError:
+                # TODO Output error or otherwise indicate bad input
+                pass
+
 
 
 class TextInputBlock(ParamInputFrame):
@@ -76,7 +112,7 @@ class TextInputBlock(ParamInputFrame):
         self.entry.grid(row=1, column=0, columnspan=2, sticky='w')
 
     def get_value(self):
-        return self.entry_text.set()
+        return self.entry_text.get()
 
     def set_value(self):
         return self.entry_text.set()

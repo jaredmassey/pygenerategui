@@ -26,6 +26,7 @@ from tkinter import ttk
 import inspect
 from typing import Union, get_args, get_origin
 from enum import EnumMeta, Enum, IntEnum, Flag, IntFlag
+import re
 
 import gui_component as gui
 
@@ -41,34 +42,28 @@ def pggui(name=None):
 
 def load_funcs(component):
     """
-    Modeled off of robotlibcore's add_library_components
-    :param component: A module or an instance of a class, containing callables to be potentially tuned into GUIs
+    Modeled loosely off of robotlibcore's add_library_components
+    :param component: A module, class, or an instance of a class, containing callables to be potentially tuned into GUIs
     :return: A list containing any functions which are flagged to be turned into a GUI
     """
-    funcs = []
-    if inspect.ismodule(component):
-        members = inspect.getmembers(component)
-    elif inspect.isclass(component):
-        raise TypeError(f'Expected module or instance, got class: {component.__name__} instead')
-    elif type(component) != component.__class__:
-        raise TypeError(f'Expected new-style class, got old-style class: {component.__class__.__name__} instead')
-    else:
-        members = _get_members(component)
+    pggui_funcs = []
 
-    def _get_members(m):
-        # Prefer to get class members to avoid calling properties
-        # I'm not certain this is the desired behavior in my case, since it will prefer default function definitions
-        # over per-instance overrides. TBD.
-        cls = type(m)
-        for name in dir(instance):
-            owner = cls if hasattr(cls, name) else m
-            yield name, getattr(owner, name)
+    def _get_members(c):
+        if not inpsect.isclass(c):
+            return [m for m in inspect.getmembers(c) if inspect.isroutine(m)]
+        else:
+            members = []
+            for m in inspect.getmembers(c):
+                if inspect.ismethod(m):
+                    members.append(m)
+                elif type(c.__dict__(m.__name__)) is staticmethod:
+                    members.append(m)
+            return members
 
-    for member in members:
-        if inspect.isroutine(member):
-            if hasattr(member, _pggui_name):
-                funcs.append(member)
-    return funcs
+    for member in _get_members(component):
+        if hasattr(member, _pggui_name):
+            funcs.append(member)
+    return pggui_funcs
 
 
     def param_is_correct_type(value, anno) -> bool:
@@ -82,26 +77,32 @@ def load_funcs(component):
             anno = get_args(anno)
         return isinstance(param, anno)
 
-
-class Application(ttk.Frame):
-    def __init__(self, master=None):
+class PGGUI_App(ttk.Frame):
+    def __init__(self, function_list, master=None):
         super().__init__(master)
         self.master = master
+        self.function_list = function_list
         self.grid(row=0, column=0)
         self.init_gui()
 
     def init_gui(self):
         # Header
-        self.header = gui.ComboBoxBlock(self, 'Select A Function To Run', {'One': 1, 'Two': 2, 'Three': 3})
-        self.header.grid(row=1, column=0)
+        self.header = gui.ComboBoxBlock(self, 'Select A Function To Run',
+                                        {'One': 1, 'Two': 2, 'Three': 3, '_manual': int},
+                                        on_select=self.combobox_selection_changed)
+        self.header.place(row=1)
+        self.lbl = ttk.Label(self, text='entry_description', anchor='nw', wraplength=450)
+        self.lbl.grid(row=0, column=0, sticky='w')
 
         # Function GUI
-        self.ti = gui.TextInputBlock(self, 'blah')
-        self.ti.grid(row=2, column=0)
-        self.ti = gui.TextInputBlock(self, 'blah2')
-        self.ti.grid(row=3, column=0)
-        self.chk = gui.BoolInputBlock(self, 'CHK')
-        self.chk.grid(row=4, column=0)
+        self.function_frame = ttk.Frame(self)
+        self.function_frame.grid(row=5, column=0, columnspan=999)
+        self.ti = gui.TextInputBlock(self.function_frame, 'blah')
+        self.ti.place(row=0, column=0)
+        self.ti = gui.TextInputBlock(self.function_frame, 'blah2')
+        self.ti.place(row=1, column=0)
+        self.chk = gui.BoolInputBlock(self.function_frame, 'CHK')
+        self.chk.place(row=2, column=0)
 
         # Footer
         # Quit Button
@@ -111,6 +112,18 @@ class Application(ttk.Frame):
         self.btn_run = ttk.Button(self, text='RUN', command=None)
         self.btn_run.grid(row=998, column=999)
 
+    def update_label_text(self, label: Label, text: str):
+        label['text'] = text
+
+    def combobox_selection_changed(self, value):
+        self.update_label_text(self.lbl, value)
+
+    def insert_function_gui(self, f):
+        # param_pattern = f':param x:(.*?)\s+[:|$]'
+        fas = inspect.getfullargspec(f)
+        description = '<No Description>' if f.__doc__ is None else f.__doc__
+
+
 root = Tk()
-app = Application(master=root)
+app = PGGUI_App([], master=root)
 app.mainloop()

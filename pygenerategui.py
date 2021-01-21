@@ -66,16 +66,16 @@ def load_funcs(component):
     return pggui_funcs
 
 
-    def param_is_correct_type(value, anno) -> bool:
-        """
-        Identify if the given param is of the type indicated by anno
-        :param param: The value passed in to the function
-        :param anno: inspect.getfullargspec(func).annotations['<param>']
-        :return: True if it is the right type, else False
-        """
-        if get_origin(anno) is Union:
-            anno = get_args(anno)
-        return isinstance(param, anno)
+def param_is_correct_type(value, anno) -> bool:
+    """
+    Identify if the given param is of the type indicated by anno
+    :param param: The value passed in to the function
+    :param anno: inspect.getfullargspec(func).annotations['<param>']
+    :return: True if it is the right type, else False
+    """
+    if get_origin(anno) is Union:
+        anno = get_args(anno)
+    return isinstance(param, anno)
 
 class PGGUI_App(ttk.Frame):
     def __init__(self, function_list, master=None):
@@ -118,10 +118,45 @@ class PGGUI_App(ttk.Frame):
     def combobox_selection_changed(self, value):
         self.update_label_text(self.lbl, value)
 
-    def insert_function_gui(self, f):
-        # param_pattern = f':param x:(.*?)\s+[:|$]'
+    def build_function_gui(self, f):
+        def cleanup_string(s):
+            return re.sub(r'\s{2,}', ' ', s.strip())
+        # docstring_entry_pattern = f':{entry}:\s+(.*?)(?::|$)'
         fas = inspect.getfullargspec(f)
-        description = '<No Description>' if f.__doc__ is None else f.__doc__
+        args_info = {} # type: dict[str, gui.ArgInfo]
+        for arg in fas.args:
+            args_info[arg] = gui.ArgInfo(name=arg)
+        if fas.defaults is not None:
+            defaults = list(fas.defaults)
+            args = list(fas.args)
+            while len(defaults) < len(args):
+                defaults.insert(0, None)
+            # {arg: [desc, type, default}
+            for i in range(len(args)):
+                args_info[args[i]].data_type = fas.annotations[args[i]]
+                args_info[args[i]].default = defaults[i]
+        if f.__doc__ is None:
+            description = '<No Description>'
+            for arg in fas.args:
+                args_info[arg].description = ''
+        else:
+            desc_re = re.search(r'^(.*?)(?::|$)', f.__doc__, re.DOTALL | re.IGNORECASE)
+            if desc_re is None:
+                description = '<Description Parse Failure>'
+            else:
+                description = cleanup_string(desc_re[1])
+            for arg in fas.args:
+                docstring_entry_pattern = r':param ARG:\s+(.*?)(?::|$)'.replace('ARG', arg)
+                arg_docstring = re.search(docstring_entry_pattern, f.__doc__, re.DOTALL | re.IGNORECASE)
+                if arg_docstring is None:
+                    args_info[arg].description = ''
+                else:
+                    args_info[arg].description = cleanup_string(arg_docstring[1])
+        return_type = None if 'return' not in fas.annotations else fas.annotations['return']
+        return_re = re.search(r':return.*?:\s+(.*?)(?::|$)', re.DOTALL | re.IGNORECASE)
+        return_desc = '' if return_re is None else cleanup_string(return_re[1])
+        args_info['return'] = ArgInfo(name='return', description=return_desc, data_type=return_type, default=None)
+        return gui.FunctionGUI(parent=self.function_frame, func=f, description=description, args_info=args_info)
 
 
 root = Tk()

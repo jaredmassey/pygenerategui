@@ -25,6 +25,7 @@ from tkinter import *
 from tkinter import ttk
 from typing import Union, get_args, get_origin
 from enum import EnumMeta, Enum, IntEnum, Flag, IntFlag
+from dataclasses import dataclass
 
 class ParamInputFrame(ttk.Frame):
     def __init__(self, parent: ttk.Frame, entry_description: str):
@@ -36,6 +37,12 @@ class ParamInputFrame(ttk.Frame):
 
     def place(self, row=0, column=0, padx=5, pady=5, sticky='w'):
         self.frame.grid(row=row, column=column, padx=padx, pady=pady, sticky=sticky)
+
+    def get_value(self):
+        raise NotImplementedError('Derived class must override')
+
+    def set_value(self, value):
+        raise NotImplementedError('Derived class must override')
 
 
 class ComboBoxBlock(ParamInputFrame):
@@ -87,22 +94,26 @@ class ComboBoxBlock(ParamInputFrame):
             except ValueError:
                 raise ValueError(f'Invalid Input: {self.selection.get()}')
 
+    def set_value(self, value: str):
+        if not '_manual' in self._source:
+            assert value in self._source, 'Invalid Setting'
+        self.selection.set(value)
+
     def _on_select(self, e):
         if self.on_select is not None:
             try:
                 self.on_select(self.get_value())
             except ValueError:
-                # TODO Output error or otherwise indicate bad input
-                pass
-
+                self.on_select('INVALID ENTRY')
 
 
 class TextInputBlock(ParamInputFrame):
-    def __init__(self, parent: ttk.Frame, entry_description: str, entry_default: str = ''):
+    def __init__(self, parent: ttk.Frame, entry_description: str, entry_default: str = '', entry_type: type = None):
         super().__init__(parent, entry_description)
         # Entry
         self.entry_text = StringVar()
         self.entry_text.set(entry_default)
+        self.entry_type = entry_type
         self.entry = ttk.Entry(self.frame, width=60, textvariable=self.entry_text)
 
         self.grid_items()
@@ -111,11 +122,11 @@ class TextInputBlock(ParamInputFrame):
         self.lbl.grid(row=0, sticky='w')
         self.entry.grid(row=1, column=0, columnspan=2, sticky='w')
 
-    def get_value(self):
+    def get_value(self) -> self.entry_type:
         return self.entry_text.get()
 
-    def set_value(self):
-        return self.entry_text.set()
+    def set_value(self, value: self.entry_type):
+        return self.entry_text.set(value)
 
 
 class BoolInputBlock(ParamInputFrame):
@@ -128,6 +139,56 @@ class BoolInputBlock(ParamInputFrame):
 
         self.grid_items()
 
+    def get_value(self) -> bool:
+        return self.checked.get()
+
+    def set_value(self, value: bool):
+        self.checked.set(value)
+
     def grid_items(self):
         self.lbl.grid(row=0, sticky='w')
         self.check_box.grid(row=1, column=0, sticky='w')
+
+
+@dataclass
+class ArgInfo:
+    """Class for arg info"""
+    name: str
+    description: str
+    data_type: type
+    default = None
+
+
+class FunctionGUI(ttk.Frame):
+    def __init__(self, parent: ttk.Frame, func, func_description: str, args_info: dict[str, ArgInfo]):
+        super().__init__(parent)
+        self.func = func
+        # Base Frame
+        self.frame = ttk.Frame(parent)
+        # Entry Label
+        self.lbl_description = ttk.Label(self.frame, text=func_description, anchor='nw', wraplength=450)
+        self.arg_guis = {}  # type: dict[str, ParamInputFrame]
+        for arg in args_info:
+            ai = args_info[arg]
+            if ai.data_type in (int, str):
+                arg_guis[arg] = TextInputBlock(self.frame, ai.description, ai.default)
+            elif ai.data_type is bool:
+                arg_guis[arg] = BoolInputBlock(self.frame, ai.description, ai.default)
+        n = 0
+        for arg in self.arg_guis:
+            self.arg_guis[arg].place(row=n)
+            n += 1
+
+    def place(self, row=0, column=0, padx=5, pady=5, sticky='w'):
+        self.frame.grid(row=row, column=column, padx=padx, pady=pady, sticky=sticky)
+
+    def run_function(self):
+        kwargs = {}
+        for arg in self.arg_guis:
+            arg_gui = self.arg_guis[arg]
+            kwargs[arg] = arg_gui.get_value()
+        try:
+            return self.func(**kwargs)
+        except Exception:
+            # TODO display error somehow
+            pass

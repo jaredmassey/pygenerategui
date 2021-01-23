@@ -30,24 +30,41 @@ import re
 
 import gui_component as gui
 
+def pggui(name=None, **kwargs):
+    """
+    Add _pggui_name to a routine so it will be identified as a pggui function
+    :param name: The name it should appear as in the function list. Will use func name if none supplied.
+    :param kwargs: Overrides for function params - dict, list, tuple, enum, or callable
+    """
+    if callable(name):
+        return pggui()(name)
+    def decorator(func):
+        func._pggui_name = name if name is not None else func.__name__
+        for kwarg in kwargs:
+            setattr(func, f'_pggui_{kwarg}', kwargs[kwarg])
+        return func
+    return decorator
 
-def example_func(x: str = 'Hello', y: bool = True) -> str:
+
+@pggui(name="MyFunc", z={'a':17.3, 'b':12.1})
+def example_func(x: str = 'Hello', y: bool = True, z: float = 12.1) -> str:
     """
     A test function
     :param x: The exxxx param
     :param y: The whyyyyyyy param
     :return: The string 'Heya!'
     """
-    return 'Heya!'
+    return f'x is: {x}, y is: {str(y)}, and z is: {str(z)}'
 
-
-def pggui(name=None):
-    if callable(name):
-        return pggui()(name)
-    def decorator(func):
-        func._pggui_name = name if name is not None else func.__name__
-        return func
-    return decorator
+@pggui
+def example_func2(x: str = 'Purple', y: bool = False, z: float = 99.9) -> str:
+    """
+    A test function
+    :param x: The exxxx param
+    :param y: The whyyyyyyy param
+    :return: The string 'Heya!'
+    """
+    return f'x is: {x}, y is: {str(y)}, and z is: {str(z)}'
 
 
 def load_funcs(component):
@@ -88,47 +105,47 @@ def param_is_correct_type(value, anno) -> bool:
     return isinstance(param, anno)
 
 class PGGUI_App(ttk.Frame):
-    def __init__(self, function_list, master=None):
+    """
+    Builds and runs the main app
+    Layout is:
+    - Header: Combobox with available functions
+    - Function GUI
+    - Footer: Run + Quit buttons
+    """
+    def __init__(self, master, function_list):
         super().__init__(master)
         self.master = master
-        self.function_list = function_list
+        self.pggui_functions = {}
+        for func in function_list:
+            self.pggui_functions[func._pggui_name] = func
         self.grid(row=0, column=0)
         self.init_gui()
 
     def init_gui(self):
+
         # Header
-        self.header = gui.ComboBoxBlock(self, 'Select A Function To Run',
-                                        {'One': 1, 'Two': 2, 'Three': 3, '_manual': int},
+        self.header = gui.ComboBoxBlock(self, entry_description='Select A Function To Run', source=self.pggui_functions,
                                         on_select=self.combobox_selection_changed)
         self.header.place(row=1)
-        self.lbl = ttk.Label(self, text='entry_description', anchor='nw', wraplength=450)
-        self.lbl.grid(row=0, column=0, sticky='w')
 
         # Function GUI
         self.function_frame = ttk.Frame(self)
         self.function_frame.grid(row=5, column=0, columnspan=999)
         self.fgui = self.build_function_gui(example_func)
         self.fgui.place()
-        # self.ti = gui.TextInputBlock(self.function_frame, 'blah')
-        # self.ti.place(row=0, column=0)
-        # self.ti = gui.TextInputBlock(self.function_frame, 'blah2')
-        # self.ti.place(row=1, column=0)
-        # self.chk = gui.BoolInputBlock(self.function_frame, 'CHK')
-        # self.chk.place(row=2, column=0)
 
         # Footer
         # Quit Button
         self.quit = ttk.Button(self, text="QUIT", command=self.master.destroy)
         self.quit.grid(row=999, column=999)
         # Run Button
-        self.btn_run = ttk.Button(self, text='RUN', command=None)
+        self.btn_run = ttk.Button(self, text='RUN', command=self.fgui.run_function)
         self.btn_run.grid(row=998, column=999)
 
-    def update_label_text(self, label: Label, text: str):
-        label['text'] = text
-
     def combobox_selection_changed(self, value):
-        self.update_label_text(self.lbl, value)
+        self.fgui = self.build_function_gui(value)
+        self.btn_run['command'] = self.fgui.run_function
+        self.fgui.place()
 
     def build_function_gui(self, f):
         def cleanup_string(s):
@@ -136,34 +153,52 @@ class PGGUI_App(ttk.Frame):
         # docstring_entry_pattern = f':{entry}:\s+(.*?)(?::|$)'
         fas = inspect.getfullargspec(f)
         args_info = {} # type: dict[str, gui.ArgInfo]
-        for arg in fas.args:
-            args_info[arg] = gui.ArgInfo(name=arg)
-        if fas.defaults is not None:
-            defaults = list(fas.defaults)
-            args = list(fas.args)
-            while len(defaults) < len(args):
-                defaults.insert(0, None)
-            # {arg: [desc, type, default}
-            for i in range(len(args)):
-                args_info[args[i]].data_type = fas.annotations[args[i]]
-                args_info[args[i]].default = defaults[i]
+
+        # Grab function description
         if f.__doc__ is None:
             description = '<No Description>'
-            for arg in fas.args:
-                args_info[arg].description = ''
         else:
             desc_re = re.search(r'^(.*?)(?::|$)', f.__doc__, re.DOTALL | re.IGNORECASE)
             if desc_re is None:
                 description = '<Description Parse Failure>'
             else:
                 description = cleanup_string(desc_re[1])
-            for arg in fas.args:
+
+        # Grab args infos
+        for arg in fas.args:
+            # Name
+            args_info[arg] = gui.ArgInfo(name=arg)
+            # Description
+            if f.__doc__ is None:
+                args_info[arg].description = ''
+            else:
                 docstring_entry_pattern = r':param ARG:\s+(.*?)(?::|$)'.replace('ARG', arg)
                 arg_docstring = re.search(docstring_entry_pattern, f.__doc__, re.DOTALL | re.IGNORECASE)
                 if arg_docstring is None:
                     args_info[arg].description = ''
                 else:
                     args_info[arg].description = cleanup_string(arg_docstring[1])
+            # Override
+            if hasattr(f, f'_pggui_{arg}'):
+                args_info[arg].override = getattr(f, f'_pggui_{arg}')
+
+        # Default Values and Types
+        if fas.defaults is not None:
+            # Arrange for arg list and defaults list to be same length
+            defaults = list(fas.defaults)
+            args = list(fas.args)
+            while len(defaults) < len(args):
+                defaults.insert(0, None)
+            for i in range(len(args)):
+                args_info[args[i]].default = defaults[i]
+                try:
+                    args_info[args[i]].data_type = fas.annotations[args[i]]
+                except KeyError:
+                    # It's okay if the annotation is missing on overridden params
+                    if args_info[args[i]].override is not None:
+                        continue
+                    raise
+
         return_type = None if 'return' not in fas.annotations else fas.annotations['return']
         return_re = re.search(r':return.*?:\s+(.*?)(?::|$)', f.__doc__, re.DOTALL | re.IGNORECASE)
         return_desc = '' if return_re is None else cleanup_string(return_re[1])
@@ -172,5 +207,6 @@ class PGGUI_App(ttk.Frame):
 
 
 root = Tk()
-app = PGGUI_App([], master=root)
+root.title('PGGUI')
+app = PGGUI_App(master=root, function_list=[example_func, example_func2])
 app.mainloop()

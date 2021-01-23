@@ -47,7 +47,7 @@ class ParamInputFrame(ttk.Frame):
 
 class ComboBoxBlock(ParamInputFrame):
     def __init__(self, parent: ttk.Frame, entry_description: str,
-                 source: Union[dict, EnumMeta, list], on_select = None):
+                 source: Union[dict, EnumMeta, list], on_select = None, default = None):
         """
         Combo Box input frame.
         :param parent: Parent Frame
@@ -58,7 +58,7 @@ class ComboBoxBlock(ParamInputFrame):
         super().__init__(parent, entry_description)
         # ComboBox
         self.selection = StringVar()
-        if type(source) is list:
+        if type(source) in (list, tuple):
             s = {}
             for item in source:
                 s[str(item)] = item
@@ -79,6 +79,11 @@ class ComboBoxBlock(ParamInputFrame):
         self.combobox['values'] = [x for x in self._source if x != '_manual']
         if '_manual' not in self._source:
             self.combobox.state(['readonly'])
+            keys = list(self._source.keys())
+            self.selection.set(keys[0])
+            for key in keys:
+                if self._source[key] == default:
+                    self.selection.set(key)
         self.grid_items()
 
     def grid_items(self):
@@ -152,11 +157,12 @@ class BoolInputBlock(ParamInputFrame):
 
 class ArgInfo:
     """Class for arg info"""
-    def __init__(self, name: str = '', description: str = '', data_type: type = None, default = None):
+    def __init__(self, name: str = '', description: str = '', data_type: type = None, default = None, override = None):
         self.name = name
         self.description = description
         self.data_type = data_type
         self.default = default
+        self.override = override
 
 
 class FunctionGUI(ttk.Frame):
@@ -173,14 +179,29 @@ class FunctionGUI(ttk.Frame):
             if arg == 'return':
                 continue
             ai = args_info[arg]
-            if ai.data_type in (int, str):
-                self.arg_guis[arg] = TextInputBlock(self.frame, ai.description, ai.default)
+            if ai.override is not None:
+                if type(ai.override in (dict, list, tuple, EnumMeta)):
+                    self.arg_guis[arg] = ComboBoxBlock(parent=self.frame, source=ai.override, default=ai.default,
+                                                       entry_description=f'{ai.name}: {ai.description}')
+                elif callable(ai.override):
+                    # TODO Handle function replacements for args
+                    raise NotImplementedError
+            elif ai.data_type in (int, float, complex, str):
+                self.arg_guis[arg] = TextInputBlock(parent=self.frame, entry_default=ai.default,
+                                                       entry_description=f'{ai.name}: {ai.description}')
             elif ai.data_type is bool:
-                self.arg_guis[arg] = BoolInputBlock(self.frame, ai.description, ai.default)
+                self.arg_guis[arg] = BoolInputBlock(parent=self.frame, entry_default=ai.default,
+                                                       entry_description=f'{ai.name}: {ai.description}')
+        # Place function gui + output labels
         n = 1
         for arg in self.arg_guis:
             self.arg_guis[arg].place(row=n)
             n += 1
+        self.lbl_result = ttk.Label(self.frame, text='', anchor='nw', wraplength=450)
+        self.lbl_result.grid(row=n, column=0, padx=5, pady=5, sticky='w')
+        n += 1
+        self.lbl_error = ttk.Label(self.frame, text = '', anchor='nw', wraplength = 450)
+        self.lbl_error.grid(row=n, column=0, padx=5, pady=5, sticky='w')
 
     def place(self, row=0, column=0, padx=5, pady=5, sticky='w'):
         self.frame.grid(row=row, column=column, padx=padx, pady=pady, sticky=sticky)
@@ -191,7 +212,8 @@ class FunctionGUI(ttk.Frame):
             arg_gui = self.arg_guis[arg]
             kwargs[arg] = arg_gui.get_value()
         try:
-            return self.func(**kwargs)
-        except Exception:
-            # TODO display error somehow
-            pass
+            result = self.func(**kwargs)
+            self.lbl_result['text'] = str(result)
+            return result
+        except Exception as e:
+            self.lbl_error['text'] = f'ERROR: {str(e)}'

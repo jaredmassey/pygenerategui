@@ -28,81 +28,10 @@ from typing import Union, get_args, get_origin
 from enum import EnumMeta, Enum, IntEnum, Flag, IntFlag
 import re
 
-import gui_component as gui
+from pygenerategui import load_funcs
+import pygenerategui.gui_component as gui
 
-def pggui(name=None, **kwargs):
-    """
-    Add _pggui_name to a routine so it will be identified as a pggui function
-    :param name: The name it should appear as in the function list. Will use func name if none supplied.
-    :param kwargs: Overrides for function params - dict, list, tuple, enum, or callable
-    """
-    if callable(name):
-        return pggui()(name)
-    def decorator(func):
-        func._pggui_name = name if name is not None else func.__name__
-        for kwarg in kwargs:
-            setattr(func, f'_pggui_{kwarg}', kwargs[kwarg])
-        return func
-    return decorator
-
-
-@pggui(name="MyFunc", z={'a':17.3, 'b':12.1})
-def example_func(x: str = 'Hello', y: bool = True, z: float = 12.1) -> str:
-    """
-    A test function
-    :param x: The exxxx param
-    :param y: The whyyyyyyy param
-    :return: The string 'Heya!'
-    """
-    return f'x is: {x}, y is: {str(y)}, and z is: {str(z)}'
-
-@pggui
-def example_func2(x: str = 'Purple', y: bool = False, z: float = 99.9) -> str:
-    """
-    A test function
-    :param x: The exxxx param
-    :param y: The whyyyyyyy param
-    :return: The string 'Heya!'
-    """
-    return f'x is: {x}, y is: {str(y)}, and z is: {str(z)}'
-
-
-def load_funcs(component):
-    """
-    Modeled loosely off of robotlibcore's add_library_components
-    :param component: A module, class, or an instance of a class, containing callables to be potentially tuned into GUIs
-    :return: A list containing any functions which are flagged to be turned into a GUI
-    """
-    pggui_funcs = []
-
-    def _get_members(c):
-        if not inpsect.isclass(c):
-            return [m for m in inspect.getmembers(c) if inspect.isroutine(m)]
-        else:
-            members = []
-            for m in inspect.getmembers(c):
-                if inspect.ismethod(m):
-                    members.append(m)
-                elif type(c.__dict__(m.__name__)) is staticmethod:
-                    members.append(m)
-            return members
-
-    for member in _get_members(component):
-        if hasattr(member, _pggui_name):
-            funcs.append(member)
-    return pggui_funcs
-
-
-def param_is_correct_type(value, anno) -> bool:
-    """
-    Identify if the given param is of the type indicated by anno
-    :param param: The value passed in to the function
-    :param anno: inspect.getfullargspec(func).annotations['<param>']
-    :return: True if it is the right type, else False
-    """
-    if get_origin(anno) is Union:
-        anno = get_args(anno)
-    return isinstance(param, anno)
+import example_module
 
 class PGGUI_App(ttk.Frame):
     """
@@ -131,7 +60,7 @@ class PGGUI_App(ttk.Frame):
         # Function GUI
         self.function_frame = ttk.Frame(self)
         self.function_frame.grid(row=5, column=0, columnspan=999)
-        self.fgui = self.build_function_gui(example_func)
+        self.fgui = self.build_function_gui(self.header.get_value())
         self.fgui.place()
 
         # Footer
@@ -208,5 +137,5 @@ class PGGUI_App(ttk.Frame):
 
 root = Tk()
 root.title('PGGUI')
-app = PGGUI_App(master=root, function_list=[example_func, example_func2])
+app = PGGUI_App(master=root, function_list=load_funcs(example_module))
 app.mainloop()

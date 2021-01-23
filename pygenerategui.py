@@ -31,6 +31,16 @@ import re
 import gui_component as gui
 
 
+def example_func(x: str = 'Hello', y: bool = True) -> str:
+    """
+    A test function
+    :param x: The exxxx param
+    :param y: The whyyyyyyy param
+    :return: The string 'Heya!'
+    """
+    return 'Heya!'
+
+
 def pggui(name=None):
     if callable(name):
         return pggui()(name)
@@ -97,12 +107,14 @@ class PGGUI_App(ttk.Frame):
         # Function GUI
         self.function_frame = ttk.Frame(self)
         self.function_frame.grid(row=5, column=0, columnspan=999)
-        self.ti = gui.TextInputBlock(self.function_frame, 'blah')
-        self.ti.place(row=0, column=0)
-        self.ti = gui.TextInputBlock(self.function_frame, 'blah2')
-        self.ti.place(row=1, column=0)
-        self.chk = gui.BoolInputBlock(self.function_frame, 'CHK')
-        self.chk.place(row=2, column=0)
+        self.fgui = self.build_function_gui(example_func)
+        self.fgui.place()
+        # self.ti = gui.TextInputBlock(self.function_frame, 'blah')
+        # self.ti.place(row=0, column=0)
+        # self.ti = gui.TextInputBlock(self.function_frame, 'blah2')
+        # self.ti.place(row=1, column=0)
+        # self.chk = gui.BoolInputBlock(self.function_frame, 'CHK')
+        # self.chk.place(row=2, column=0)
 
         # Footer
         # Quit Button
@@ -153,10 +165,10 @@ class PGGUI_App(ttk.Frame):
                 else:
                     args_info[arg].description = cleanup_string(arg_docstring[1])
         return_type = None if 'return' not in fas.annotations else fas.annotations['return']
-        return_re = re.search(r':return.*?:\s+(.*?)(?::|$)', re.DOTALL | re.IGNORECASE)
+        return_re = re.search(r':return.*?:\s+(.*?)(?::|$)', f.__doc__, re.DOTALL | re.IGNORECASE)
         return_desc = '' if return_re is None else cleanup_string(return_re[1])
-        args_info['return'] = ArgInfo(name='return', description=return_desc, data_type=return_type, default=None)
-        return gui.FunctionGUI(parent=self.function_frame, func=f, description=description, args_info=args_info)
+        args_info['return'] = gui.ArgInfo(name='return', description=return_desc, data_type=return_type, default=None)
+        return gui.FunctionGUI(parent=self.function_frame, func=f, func_description=description, args_info=args_info)
 
 
 root = Tk()

@@ -122,10 +122,10 @@ class TextInputBlock(ParamInputFrame):
         self.lbl.grid(row=0, sticky='w')
         self.entry.grid(row=1, column=0, columnspan=2, sticky='w')
 
-    def get_value(self) -> self.entry_type:
+    def get_value(self):
         return self.entry_text.get()
 
-    def set_value(self, value: self.entry_type):
+    def set_value(self, value):
         return self.entry_text.set(value)
 
 
@@ -150,13 +150,13 @@ class BoolInputBlock(ParamInputFrame):
         self.check_box.grid(row=1, column=0, sticky='w')
 
 
-@dataclass
 class ArgInfo:
     """Class for arg info"""
-    name: str
-    description: str
-    data_type: type
-    default = None
+    def __init__(self, name: str = '', description: str = '', data_type: type = None, default = None):
+        self.name = name
+        self.description = description
+        self.data_type = data_type
+        self.default = default
 
 
 class FunctionGUI(ttk.Frame):
@@ -164,17 +164,20 @@ class FunctionGUI(ttk.Frame):
         super().__init__(parent)
         self.func = func
         # Base Frame
-        self.frame = ttk.Frame(parent)
+        self.frame = ttk.Frame(parent, borderwidth = 3, relief = 'ridge')
         # Entry Label
-        self.lbl_description = ttk.Label(self.frame, text=func_description, anchor='nw', wraplength=450)
+        self.lbl_func_description = ttk.Label(self.frame, text=func_description, anchor='nw', wraplength=450)
+        self.lbl_func_description.grid(row = 0, column = 0, padx = 5, pady = 5, sticky = 'w')
         self.arg_guis = {}  # type: dict[str, ParamInputFrame]
         for arg in args_info:
+            if arg == 'return':
+                continue
             ai = args_info[arg]
             if ai.data_type in (int, str):
-                arg_guis[arg] = TextInputBlock(self.frame, ai.description, ai.default)
+                self.arg_guis[arg] = TextInputBlock(self.frame, ai.description, ai.default)
             elif ai.data_type is bool:
-                arg_guis[arg] = BoolInputBlock(self.frame, ai.description, ai.default)
-        n = 0
+                self.arg_guis[arg] = BoolInputBlock(self.frame, ai.description, ai.default)
+        n = 1
         for arg in self.arg_guis:
             self.arg_guis[arg].place(row=n)
             n += 1

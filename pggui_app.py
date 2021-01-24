@@ -72,6 +72,7 @@ class PGGUI_App(ttk.Frame):
         self.btn_run.grid(row=998, column=999)
 
     def combobox_selection_changed(self, value):
+        self.fgui.remove()
         self.fgui = self.build_function_gui(value)
         self.btn_run['command'] = self.fgui.run_function
         self.fgui.place()
@@ -119,6 +120,10 @@ class PGGUI_App(ttk.Frame):
             while len(defaults) < len(args):
                 defaults.insert(0, None)
             for i in range(len(args)):
+                # Skip first arg on methods
+                if inspect.ismethod(f):
+                    if i == 0:
+                        continue
                 args_info[args[i]].default = defaults[i]
                 try:
                     args_info[args[i]].data_type = fas.annotations[args[i]]
@@ -137,5 +142,8 @@ class PGGUI_App(ttk.Frame):
 
 root = Tk()
 root.title('PGGUI')
-app = PGGUI_App(master=root, function_list=load_funcs(example_module))
+modules = []
+for x in (example_module, example_module.StaticClassExample, example_module.InstanceClassExample(12)):
+    modules += load_funcs(x)
+app = PGGUI_App(master=root, function_list=modules)
 app.mainloop()

@@ -128,7 +128,7 @@ class TextInputBlock(ParamInputFrame):
         self.entry.grid(row=1, column=0, columnspan=2, sticky='w')
 
     def get_value(self):
-        return self.entry_text.get()
+        return self.entry_type(self.entry_text.get())
 
     def set_value(self, value):
         return self.entry_text.set(value)
@@ -188,10 +188,11 @@ class FunctionGUI(ttk.Frame):
                     raise NotImplementedError
             elif ai.data_type in (int, float, complex, str):
                 self.arg_guis[arg] = TextInputBlock(parent=self.frame, entry_default=ai.default,
-                                                       entry_description=f'{ai.name}: {ai.description}')
+                                                    entry_description=f'{ai.name}: {ai.description}',
+                                                    entry_type=ai.data_type)
             elif ai.data_type is bool:
-                self.arg_guis[arg] = BoolInputBlock(parent=self.frame, entry_default=ai.default,
-                                                       entry_description=f'{ai.name}: {ai.description}')
+                self.arg_guis[arg] = BoolInputBlock(parent=self.frame, entry_default=bool(ai.default),
+                                                    entry_description=f'{ai.name}: {ai.description}')
         # Place function gui + output labels
         n = 1
         for arg in self.arg_guis:
@@ -205,6 +206,10 @@ class FunctionGUI(ttk.Frame):
 
     def place(self, row=0, column=0, padx=5, pady=5, sticky='w'):
         self.frame.grid(row=row, column=column, padx=padx, pady=pady, sticky=sticky)
+
+    def remove(self):
+        self.frame.grid_forget()
+        self.destroy()
 
     def run_function(self):
         kwargs = {}

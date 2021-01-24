@@ -53,11 +53,13 @@ def load_funcs(component):
             return result
         else:
             members = []
-            for m in inspect.getmembers(c):
-                if inspect.ismethod(m):
-                    members.append(m)
-                elif type(c.__dict__(m.__name__)) is staticmethod:
-                    members.append(m)
+            im = dict(inspect.getmembers(c))
+            for m in im:
+                if inspect.isroutine(im[m]):
+                    if inspect.ismethod(im[m]):
+                        members.append(im[m])
+                    elif m in c.__dict__ and type(c.__dict__[m]) is staticmethod:
+                        members.append(im[m])
             return members
 
     for member in _get_members(component):

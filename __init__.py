@@ -66,7 +66,7 @@ def load_funcs(component):
                     if inspect.ismethod(im[m]):
                         members.append(im[m])
                     elif m in c.__dict__ and type(c.__dict__[m]) is staticmethod:
-                        members.append(m[1])
+                        members.append(im[m])
             return members
 
     for member in _get_members(component):

@@ -26,6 +26,8 @@ from tkinter import ttk
 from typing import Union, get_args, get_origin
 from enum import EnumMeta, Enum, IntEnum, Flag, IntFlag
 from dataclasses import dataclass
+import inspect
+import re
 
 class ParamInputFrame(ttk.Frame):
     def __init__(self, parent: ttk.Frame, entry_description: str):
@@ -43,6 +45,18 @@ class ParamInputFrame(ttk.Frame):
 
     def set_value(self, value):
         raise NotImplementedError('Derived class must override')
+
+    @staticmethod
+    def param_is_correct_type(value, anno) -> bool:
+        """
+        Identify if the given param is of the type indicated by anno
+        :param param: The value passed in to the function
+        :param anno: inspect.getfullargspec(func).annotations['<param>']
+        :return: True if it is the right type, else False
+        """
+        if get_origin(anno) is Union:
+            anno = get_args(anno)
+        return isinstance(param, anno)
 
 
 class ComboBoxBlock(ParamInputFrame):
@@ -203,6 +217,69 @@ class FunctionGUI(ttk.Frame):
         n += 1
         self.lbl_error = ttk.Label(self.frame, text = '', anchor='nw', wraplength = 450)
         self.lbl_error.grid(row=n, column=0, padx=5, pady=5, sticky='w')
+
+    @staticmethod
+    def build_function_gui(parent: ttk.Frame, func):
+        def cleanup_string(s):
+            return re.sub(r'\s{2,}', ' ', s.strip())
+        # docstring_entry_pattern = f':{entry}:\s+(.*?)(?::|$)'
+        fas = inspect.getfullargspec(func)
+        args_info = {} # type: dict[str, gui.ArgInfo]
+
+        # Grab function description
+        if func.__doc__ is None:
+            description = '<No Description>'
+        else:
+            desc_re = re.search(r'^(.*?)(?::|$)', func.__doc__, re.DOTALL | re.IGNORECASE)
+            if desc_re is None:
+                description = '<Description Parse Failure>'
+            else:
+                description = cleanup_string(desc_re[1])
+
+        # Grab args infos
+        for arg in fas.args:
+            # Name
+            args_info[arg] = ArgInfo(name=arg)
+            # Description
+            if func.__doc__ is None:
+                args_info[arg].description = ''
+            else:
+                docstring_entry_pattern = r':param ARG:\s+(.*?)(?::|$)'.replace('ARG', arg)
+                arg_docstring = re.search(docstring_entry_pattern, func.__doc__, re.DOTALL | re.IGNORECASE)
+                if arg_docstring is None:
+                    args_info[arg].description = ''
+                else:
+                    args_info[arg].description = cleanup_string(arg_docstring[1])
+            # Override
+            if hasattr(func, f'_pggui_{arg}'):
+                args_info[arg].override = getattr(func, f'_pggui_{arg}')
+
+        # Default Values and Types
+        if fas.defaults is not None:
+            # Arrange for arg list and defaults list to be same length
+            defaults = list(fas.defaults)
+            args = list(fas.args)
+            while len(defaults) < len(args):
+                defaults.insert(0, None)
+            for i in range(len(args)):
+                # Skip first arg on methods
+                if inspect.ismethod(func):
+                    if i == 0:
+                        continue
+                args_info[args[i]].default = defaults[i]
+                try:
+                    args_info[args[i]].data_type = fas.annotations[args[i]]
+                except KeyError:
+                    # It's okay if the annotation is missing on overridden params
+                    if args_info[args[i]].override is not None:
+                        continue
+                    raise
+
+        return_type = None if 'return' not in fas.annotations else fas.annotations['return']
+        return_re = re.search(r':return.*?:\s+(.*?)(?::|$)', func.__doc__, re.DOTALL | re.IGNORECASE)
+        return_desc = '' if return_re is None else cleanup_string(return_re[1])
+        args_info['return'] = ArgInfo(name='return', description=return_desc, data_type=return_type, default=None)
+        return FunctionGUI(parent=parent, func=func, func_description=description, args_info=args_info)
 
     def place(self, row=0, column=0, padx=5, pady=5, sticky='w'):
         self.frame.grid(row=row, column=column, padx=padx, pady=pady, sticky=sticky)

@@ -30,6 +30,7 @@ import re
 
 import pygenerategui.gui_component as gui
 
+
 def pggui(name=None, **kwargs):
     """
     Add _pggui_name to a routine so it will be identified as a pggui function
@@ -46,47 +47,6 @@ def pggui(name=None, **kwargs):
     return decorator
 
 
-def load_funcs(component):
-    """
-    Modeled loosely off of robotlibcore's add_library_components
-    :param component: A module, class, or an instance of a class, containing routines to be potentially turned into GUIs
-    :return: A list containing any functions which are flagged to be turned into a GUI
-    """
-    pggui_funcs = []
-
-    def _get_members(c):
-        if not inspect.isclass(c):
-            result = [m[1] for m in inspect.getmembers(c) if inspect.isroutine(m[1])]
-            return result
-        else:
-            members = []
-            im = dict(inspect.getmembers(c))
-            for m in im:
-                if inspect.isroutine(im[m]):
-                    if inspect.ismethod(im[m]):
-                        members.append(im[m])
-                    elif m in c.__dict__ and type(c.__dict__[m]) is staticmethod:
-                        members.append(im[m])
-            return members
-
-    for member in _get_members(component):
-        if hasattr(member, '_pggui_name'):
-            pggui_funcs.append(member)
-    return pggui_funcs
-
-
-def param_is_correct_type(value, anno) -> bool:
-    """
-    Identify if the given param is of the type indicated by anno
-    :param param: The value passed in to the function
-    :param anno: inspect.getfullargspec(func).annotations['<param>']
-    :return: True if it is the right type, else False
-    """
-    if get_origin(anno) is Union:
-        anno = get_args(anno)
-    return isinstance(param, anno)
-
-
 class PGGUI_App(ttk.Frame):
     """
     Builds and runs the main app
@@ -95,17 +55,48 @@ class PGGUI_App(ttk.Frame):
     - Function GUI
     - Footer: Run + Quit buttons
     """
-    def __init__(self, master, function_list):
-        super().__init__(master)
-        self.master = master
+    def __init__(self, components: list, title: str = 'PGGUI App'):
+        root = Tk()
+        root.title = title
+        super().__init__(root)
         self.pggui_functions = {}
+        function_list = []
+        for components in components:
+            function_list += self.load_funcs(components)
         for func in function_list:
             self.pggui_functions[func._pggui_name] = func
         self.grid(row=0, column=0)
         self.init_gui()
 
-    def init_gui(self):
+    def load_funcs(self, component):
+        """
+        Modeled loosely off of robotlibcore's add_library_components
+        :param component: A module, class, or an instance of a class, containing routines to be potentially turned into GUIs
+        :return: A list containing any functions which are flagged to be turned into a GUI
+        """
+        pggui_funcs = []
 
+        def _get_members(c):
+            if not inspect.isclass(c):
+                result = [m[1] for m in inspect.getmembers(c) if inspect.isroutine(m[1])]
+                return result
+            else:
+                members = []
+                im = dict(inspect.getmembers(c))
+                for m in im:
+                    if inspect.isroutine(im[m]):
+                        if inspect.ismethod(im[m]):
+                            members.append(im[m])
+                        elif m in c.__dict__ and type(c.__dict__[m]) is staticmethod:
+                            members.append(im[m])
+                return members
+
+        for member in _get_members(component):
+            if hasattr(member, '_pggui_name'):
+                pggui_funcs.append(member)
+        return pggui_funcs
+
+    def init_gui(self):
         # Header
         self.header = gui.ComboBoxBlock(self, entry_description='Select A Function To Run', source=self.pggui_functions,
                                         on_select=self.combobox_selection_changed)
@@ -114,7 +105,7 @@ class PGGUI_App(ttk.Frame):
         # Function GUI
         self.function_frame = ttk.Frame(self)
         self.function_frame.grid(row=5, column=0, columnspan=999)
-        self.fgui = self.build_function_gui(self.header.get_value())
+        self.fgui = gui.FunctionGUI.build_function_gui(self.function_frame, self.header.get_value())
         self.fgui.place()
 
         # Footer
@@ -127,69 +118,6 @@ class PGGUI_App(ttk.Frame):
 
     def combobox_selection_changed(self, value):
         self.fgui.remove()
-        self.fgui = self.build_function_gui(value)
+        self.fgui = gui.FunctionGUI.build_function_gui(self.function_frame, value)
         self.btn_run['command'] = self.fgui.run_function
         self.fgui.place()
-
-    def build_function_gui(self, f):
-        def cleanup_string(s):
-            return re.sub(r'\s{2,}', ' ', s.strip())
-        # docstring_entry_pattern = f':{entry}:\s+(.*?)(?::|$)'
-        fas = inspect.getfullargspec(f)
-        args_info = {} # type: dict[str, gui.ArgInfo]
-
-        # Grab function description
-        if f.__doc__ is None:
-            description = '<No Description>'
-        else:
-            desc_re = re.search(r'^(.*?)(?::|$)', f.__doc__, re.DOTALL | re.IGNORECASE)
-            if desc_re is None:
-                description = '<Description Parse Failure>'
-            else:
-                description = cleanup_string(desc_re[1])
-
-        # Grab args infos
-        for arg in fas.args:
-            # Name
-            args_info[arg] = gui.ArgInfo(name=arg)
-            # Description
-            if f.__doc__ is None:
-                args_info[arg].description = ''
-            else:
-                docstring_entry_pattern = r':param ARG:\s+(.*?)(?::|$)'.replace('ARG', arg)
-                arg_docstring = re.search(docstring_entry_pattern, f.__doc__, re.DOTALL | re.IGNORECASE)
-                if arg_docstring is None:
-                    args_info[arg].description = ''
-                else:
-                    args_info[arg].description = cleanup_string(arg_docstring[1])
-            # Override
-            if hasattr(f, f'_pggui_{arg}'):
-                args_info[arg].override = getattr(f, f'_pggui_{arg}')
-
-        # Default Values and Types
-        if fas.defaults is not None:
-            # Arrange for arg list and defaults list to be same length
-            defaults = list(fas.defaults)
-            args = list(fas.args)
-            while len(defaults) < len(args):
-                defaults.insert(0, None)
-            for i in range(len(args)):
-                # Skip first arg on methods
-                if inspect.ismethod(f):
-                    if i == 0:
-                        continue
-                args_info[args[i]].default = defaults[i]
-                try:
-                    args_info[args[i]].data_type = fas.annotations[args[i]]
-                except KeyError:
-                    # It's okay if the annotation is missing on overridden params
-                    if args_info[args[i]].override is not None:
-                        continue
-                    raise
-
-        return_type = None if 'return' not in fas.annotations else fas.annotations['return']
-        return_re = re.search(r':return.*?:\s+(.*?)(?::|$)', f.__doc__, re.DOTALL | re.IGNORECASE)
-        return_desc = '' if return_re is None else cleanup_string(return_re[1])
-        args_info['return'] = gui.ArgInfo(name='return', description=return_desc, data_type=return_type, default=None)
-        return gui.FunctionGUI(parent=self.function_frame, func=f, func_description=description, args_info=args_info)
-

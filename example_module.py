@@ -52,7 +52,7 @@ def skipped_func(first: bool, second: int = 3):
     """
     pass
 
-class StaticClassExample:
+class ClassExample:
     sce_x = 27
     """
     This class will be passed as a class, so methods should not be included
@@ -93,7 +93,7 @@ class StaticClassExample:
         return parm + cls.sce_x
 
 
-class InstanceClassExample:
+class ClassInstanceExample:
     ice_x = 32
     """
     This class will be passed as an instance, so all routines should be included

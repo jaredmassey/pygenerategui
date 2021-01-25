@@ -4,7 +4,7 @@ from pygenerategui import *
 import example_module
 
 # Components can be module, class, or class instance
-components = [example_module, example_module.StaticClassExample, example_module.InstanceClassExample(12)]
+components = [example_module, example_module.ClassExample, example_module.ClassInstanceExample(12)]
 # Title can be whatever you want
 app = PGGUI_App(title='My App Title', components=components)
 app.mainloop()

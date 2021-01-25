@@ -20,7 +20,7 @@ Most functionality is demonstrated in `example_module.py`
 - Function name can be replaced in ui by specifing `name` argument of decorator
 - Arguments can be limited to a predefined set using dict, enum, or list by overriding the arg in decorator args
   - This is also useful if the argument is not a basic type (bool, string, number)
-- Example: @pggue(name='MyFunc', arg2=some_dict)
+- Example: `@pggui(name='MyFunc', arg2=some_dict)`
 
 ### TODO
 - Add ability for args to be overridden with another function, and nest that function's args in UI

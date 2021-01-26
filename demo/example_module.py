@@ -59,6 +59,27 @@ def skipped_func(first: bool, second: int = 3):
     """
     return second + 3
 
+@pggui
+def func_missing_docstring(param1: int, param2: bool = True):
+    if param2:
+        return -1 * param1
+    return param1
+
+@pggui(p1={'Opt1': 'Horse', 'Opt2': 'Cow'})
+def simple_func_with_override(p1: str):
+    return p1
+
+# If an arg is overridden with another pggui-decorated func with an overridden arg,
+# That override will be retained in the nested gui.
+@pggui(val=simple_func_with_override)
+def func_with_overriden_override(val: str):
+    """
+    Showing verrides carry through to outer func
+    :param val: A string to use
+    :return: val * 2 (e.g. 'x' -> 'xx')
+    """
+    return val * 2
+
 class ClassExample:
     sce_x = 27
     """

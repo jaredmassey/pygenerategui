@@ -3,7 +3,6 @@ from tkinter import ttk
 import inspect
 from typing import Union, get_args, get_origin
 from enum import EnumMeta, Enum, IntEnum, Flag, IntFlag
-import re
 
 import pygenerategui.gui_component as gui
 

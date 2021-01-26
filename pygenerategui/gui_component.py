@@ -271,7 +271,7 @@ class FunctionGUI(ttk.Frame):
         args_info = {} # type: dict[str, gui.ArgInfo]
 
         # Grab function description
-        if func.__doc__ is None:
+        if func.__doc__ is None or func.__doc__ == '':
             description = '<No Description>'
         else:
             desc_re = re.search(r'^(.*?)(?::|$)', func.__doc__, re.DOTALL | re.IGNORECASE)
@@ -342,8 +342,11 @@ class FunctionGUI(ttk.Frame):
                 raise
 
         return_type = None if 'return' not in fas.annotations else fas.annotations['return']
-        return_re = re.search(r':return.*?:\s+(.*?)(?::|$)', func.__doc__, re.DOTALL | re.IGNORECASE)
-        return_desc = '' if return_re is None else cleanup_string(return_re[1])
+        if func.__doc__ is None or func.__doc__ == '':
+            return_desc = ''
+        else:
+            return_re = re.search(r':return.*?:\s+(.*?)(?::|$)', func.__doc__, re.DOTALL | re.IGNORECASE)
+            return_desc = '' if return_re is None else cleanup_string(return_re[1])
         args_info['return'] = ArgInfo(name='return', description=return_desc, data_type=return_type, default=None)
         return FunctionGUI(parent=parent, func=func, func_description=description, args_info=args_info)
 

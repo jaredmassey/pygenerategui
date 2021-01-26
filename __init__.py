@@ -40,8 +40,7 @@ def pggui(name = None, **kwargs):
             kwarg_name = f'_pggui_{kwarg}'
             kwarg_value = kwargs[kwarg]
             setattr(func, kwarg_name, kwarg_value)
-        if not hasattr(func, '_pggui_name'):
-            func._pggui_name = func.__name__
+        func._pggui_name = func.__name__ if name is None else name
         return func
     return decorator
 

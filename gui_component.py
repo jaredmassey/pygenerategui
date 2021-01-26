@@ -91,7 +91,6 @@ class ComboBoxBlock(ParamInputFrame):
         self.combobox = ttk.Combobox(self.frame, textvariable=self.selection)
         self.on_select = on_select
         self.combobox.bind('<<ComboboxSelected>>', self._on_select)
-        self.combobox.bind('<FocusOut>', self._on_select)
         # Set up default values and whether to allow manual entry
         self.combobox['values'] = [x for x in self._source if x != '_manual']
         if '_manual' not in self._source:
@@ -101,6 +100,8 @@ class ComboBoxBlock(ParamInputFrame):
             for key in keys:
                 if self._source[key] == default:
                     self.selection.set(key)
+        else:
+            self.combobox.bind('<FocusOut>', self._on_select)
         self.grid_items()
 
     def grid_items(self):

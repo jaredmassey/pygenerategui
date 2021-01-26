@@ -112,7 +112,9 @@ class PGGUI_App(ttk.Frame):
         self.function_canvas.create_window((0, 0), window=self.function_frame, anchor='nw', tags='self.frame')
 
         self.function_canvas_frame.configure(height=400, width=600)
-        self.function_canvas.configure(scrollregion=(0,0,1000,1000))
+        self.fgui.update()
+        bbox = self.fgui.frame.bbox(1000, 1000)
+        self.function_canvas.configure(scrollregion=(0, 0, bbox[0], bbox[1] + 10))
 
         # Footer
         # Result Display:
@@ -126,7 +128,9 @@ class PGGUI_App(ttk.Frame):
         self.fgui = gui.FunctionGUI.build_function_gui(self.function_frame, value)
         # self.btn_run['command'] = self.fgui.run_function
         self.fgui.place()
-        self.function_canvas.configure(scrollregion=self.function_canvas.bbox('all'))
+        self.fgui.update()
+        bbox = self.fgui.frame.bbox(1000, 1000)
+        self.function_canvas.configure(scrollregion=(0,0,bbox[0],bbox[1] + 10))
 
     def run_function(self):
         try:

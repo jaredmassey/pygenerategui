@@ -28,7 +28,5 @@ Most functionality is demonstrated in `example_module.py`
 - Add ability for returned values to be stored and passed in to some other function
   - Mitigated with results in selectable text, for now
 - Better error messaging
-- As-Needed Scrollbars (if anybody knows good doc / practical example of tkinter scrollbars, especially when using grid instead of pack, hmu!)
-- Allow functions with no docstring
 
 Send me a note if you're using this, I'm curious!

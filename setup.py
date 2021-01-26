@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="pygenerategui-jbmassey", # Replace with your own username
-    version="0.0.6",
+    version="0.0.7",
     author="Jared Massey",
     author_email="jared@jaredmassey.com",
     description="Utility for generating simple GUI to execute Python code",

@@ -38,7 +38,7 @@ def example_func(x: str = 'Hello', y: bool = True, z: float = 12.1) -> str:
     """
     return f'x is: {x}, y is: {str(y)}, and z is: {str(z)}'*10
 
-# If an arg's type hint is a Union, it will be treated as the first of this of the following in the Union:
+# If an arg's type hint is a Union, it will be treated as the first of the following in the Union:
 # bool, str, int, float, complex
 @pggui
 def example_func2(x: str = 'Purple', y: bool = False, z: Union[float, None] = 99.9) -> str:

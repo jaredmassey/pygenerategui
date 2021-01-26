@@ -27,12 +27,16 @@ import inspect
 from typing import Union, get_args, get_origin
 from enum import EnumMeta, Enum, IntEnum, Flag, IntFlag
 import re
-from functools import wraps, partial
 
 import pygenerategui.gui_component as gui
 
 
 def pggui(name = None, **kwargs):
+    """
+    Add _pggui_name to a routine so it will be identified as a pggui function
+    :param name: The name it should appear as in the function list. Will use func name if none supplied.
+    :param kwargs: Overrides for function params - dict, list, tuple, enum, or callable
+    """
     if inspect.isroutine(name):
         return pggui()(name)
     def decorator(func):

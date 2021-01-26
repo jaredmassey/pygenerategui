@@ -21,7 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from pygenerategui import pggui
+from pygenerategui import *
 from typing import Union
 
 # example_func will appear in the functions list as 'MyFunc'

@@ -44,6 +44,8 @@ class PGGUI_App(ttk.Frame):
         for func in function_list:
             self.pggui_functions[func._pggui_name] = func
         self.grid(row=0, column=0)
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
         self.init_gui()
 
     def load_funcs(self, component):
@@ -79,31 +81,52 @@ class PGGUI_App(ttk.Frame):
         # Header
         self.header = gui.ComboBoxBlock(self, entry_description='Select A Function To Run', source=self.pggui_functions,
                                         on_select=self.combobox_selection_changed)
-        self.header.place(row=1)
+        self.header.place(row=1, sticky='sw')
+        # Run Button
+        self.btn_run = ttk.Button(self, text='RUN', command=self.run_function)
+        self.btn_run.grid(row=1, column=4, sticky='se')
+        # Quit Button
+        self.quit = ttk.Button(self, text="QUIT", command=self.master.destroy)
+        self.quit.grid(row=1, column=5, sticky='se')
 
         # Function GUI
-        self.function_frame = ttk.Frame(self)
-        self.function_frame.grid(row=5, column=0, columnspan=999, sticky='w')
+        self.function_canvas_frame = ttk.Frame(self)
+        self.function_canvas_frame.grid(row=5, column=0, columnspan=999, sticky='w')
+        self.function_canvas_frame.grid_rowconfigure(0, weight=1)
+        self.function_canvas_frame.grid_columnconfigure(0, weight=1)
+        self.function_canvas_frame.grid_propagate(False)
+
+        self.function_canvas = tk.Canvas(self.function_canvas_frame)
+        self.function_canvas.grid(row=0, column=0, sticky='news')
+
+        self.fgui_vscroll = tk.Scrollbar(self.function_canvas_frame, orient='vertical',
+                                         command=self.function_canvas.yview)
+        self.fgui_vscroll.grid(row=0, column=999, sticky='ns')
+        self.function_canvas.configure(yscrollcommand=self.fgui_vscroll.set, width=455)
+
+        self.function_frame = ttk.Frame(self.function_canvas)
+        self.function_frame.grid_rowconfigure(0, weight=1)
+        self.function_frame.grid_columnconfigure(0, weight=1)
         self.fgui = gui.FunctionGUI.build_function_gui(self.function_frame, self.header.get_value())
         self.fgui.place()
+        self.function_canvas.create_window((0, 0), window=self.function_frame, anchor='nw', tags='self.frame')
+
+        self.function_canvas_frame.configure(height=400, width=600)
+        self.function_canvas.configure(scrollregion=(0,0,1000,1000))
 
         # Footer
         # Result Display:
         self.result_frame = ttk.Frame(self)
         self.result_frame.grid(row=997, column=0, columnspan=999, sticky='w')
         self.rgui = None
-        # Run Button
-        self.btn_run = ttk.Button(self, text='RUN', command=self.run_function)
-        self.btn_run.grid(row=998, column=999)
-        # Quit Button
-        self.quit = ttk.Button(self, text="QUIT", command=self.master.destroy)
-        self.quit.grid(row=999, column=999)
+
 
     def combobox_selection_changed(self, value):
         self.fgui.remove()
         self.fgui = gui.FunctionGUI.build_function_gui(self.function_frame, value)
         # self.btn_run['command'] = self.fgui.run_function
         self.fgui.place()
+        self.function_canvas.configure(scrollregion=self.function_canvas.bbox('all'))
 
     def run_function(self):
         try:

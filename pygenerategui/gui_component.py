@@ -88,7 +88,7 @@ class ComboBoxBlock(ParamInputFrame):
             assert type(self._source) is dict, f'Could not convert source to dict: {type(self._source)}'
         except AssertionError:
             raise
-        self.combobox = ttk.Combobox(self.frame, textvariable=self.selection)
+        self.combobox = ttk.Combobox(self.frame, textvariable=self.selection, width=65)
         self.on_select = on_select
         self.combobox.bind('<<ComboboxSelected>>', self._on_select)
         # Set up default values and whether to allow manual entry

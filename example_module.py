@@ -55,9 +55,9 @@ def skipped_func(first: bool, second: int = 3):
     This function should not appear
     :param first: The first param
     :param second: The second param
-    :return: Nada
+    :return: second plus 3
     """
-    pass
+    return second + 3
 
 class ClassExample:
     sce_x = 27
@@ -67,9 +67,9 @@ class ClassExample:
     def __init__(self):
         pass
 
-
+    # You can override a variable with a function and that function will be nested in the gui
     @staticmethod
-    @pggui
+    @pggui(name='blah', p2=skipped_func)
     def sce_static_meth(p1: bool, p2: int = 3):
         """
         A static method, should appear

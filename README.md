@@ -21,11 +21,13 @@ Most functionality is demonstrated in `example_module.py`
 - Arguments can be limited to a predefined set using dict, enum, or list by overriding the arg in decorator args
   - This is also useful if the argument is not a basic type (bool, string, number)
 - Example: `@pggui(name='MyFunc', arg2=some_dict)`
+- Arguments can also be overridden with another function, which will then be nested in the gui
+
 
 ### TODO
-- Add ability for args to be overridden with another function, and nest that function's args in UI
 - Add ability for returned values to be stored and passed in to some other function
+  - Mitigated with results in selectable text, for now
 - Better error messaging
-- Scrollbars (if anybody knows good doc / practical example of tkinter scrollbars, hmu!)
+- As-Needed Scrollbars (if anybody knows good doc / practical example of tkinter scrollbars, especially when using grid instead of pack, hmu!)
 
 Send me a note if you're using this, I'm curious!

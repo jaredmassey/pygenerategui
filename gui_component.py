@@ -84,7 +84,10 @@ class ComboBoxBlock(ParamInputFrame):
             self._source = s
         else:
             self._source = source
-        assert type(self._source) is dict, f'Could not convert source to dict: {type(self._source)}'
+        try:
+            assert type(self._source) is dict, f'Could not convert source to dict: {type(self._source)}'
+        except AssertionError:
+            raise
         self.combobox = ttk.Combobox(self.frame, textvariable=self.selection)
         self.on_select = on_select
         self.combobox.bind('<<ComboboxSelected>>', self._on_select)
@@ -244,19 +247,18 @@ class FunctionGUI(ttk.Frame):
 
     def get_arg_input_gui(self, arg: str, arg_info: ArgInfo):
         if arg_info.override is not None:
-            if type(arg_info.override in (dict, list, tuple, EnumMeta)):
-                 return ComboBoxBlock(parent=self.frame, source=arg_info.override, default=arg_info.default,
-                                                   entry_description=f'{arg_info.name}: {arg_info.description}')
+            if type(arg_info.override) in (dict, list, tuple, EnumMeta):
+                return ComboBoxBlock(parent=self.frame, source=arg_info.override, default=arg_info.default,
+                                     entry_description=f'{arg_info.name}: {arg_info.description}')
             elif callable(arg_info.override):
-                # TODO Handle function replacements for args
-                raise NotImplementedError
+                return self.build_function_gui(self.frame, arg_info.override)
         elif arg_info.data_type in (int, float, complex, str):
             return TextInputBlock(parent=self.frame, entry_default=arg_info.default,
-                                                entry_description=f'{arg_info.name}: {arg_info.description}',
-                                                entry_type=arg_info.data_type)
+                                  entry_description=f'{arg_info.name}: {arg_info.description}',
+                                  entry_type=arg_info.data_type)
         elif arg_info.data_type is bool:
             return BoolInputBlock(parent=self.frame, entry_default=bool(arg_info.default),
-                                                entry_description=f'{arg_info.name}: {arg_info.description}')
+                                  entry_description=f'{arg_info.name}: {arg_info.description}')
         else: return None
 
     @staticmethod
@@ -279,7 +281,6 @@ class FunctionGUI(ttk.Frame):
 
         # Grab args infos
         for arg in fas.args:
-
             # Name
             args_info[arg] = ArgInfo(name=arg)
             # Description
@@ -294,7 +295,8 @@ class FunctionGUI(ttk.Frame):
                     args_info[arg].description = cleanup_string(arg_docstring[1])
             # Override
             if hasattr(func, f'_pggui_{arg}'):
-                args_info[arg].override = getattr(func, f'_pggui_{arg}')
+                ovr = getattr(func, f'_pggui_{arg}')
+                args_info[arg].override = ovr
 
         # Default Values and Types
         if fas.defaults is not None:

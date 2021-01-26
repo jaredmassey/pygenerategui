@@ -300,10 +300,10 @@ class FunctionGUI(ttk.Frame):
                 args_info[arg].override = ovr
 
         # Default Values and Types
+        args = list(fas.args)
         if fas.defaults is not None:
             # Arrange for arg list and defaults list to be same length
             defaults = list(fas.defaults)
-            args = list(fas.args)
             while len(defaults) < len(args):
                 defaults.insert(0, None)
             for i in range(len(args)):
@@ -312,22 +312,34 @@ class FunctionGUI(ttk.Frame):
                     if i == 0:
                         continue
                 args_info[args[i]].default = defaults[i]
-                try:
-                    anno_type = fas.annotations[args[i]]
-                    if get_origin(anno_type) == Union:
-                        if bool in get_args(anno_type):
-                            anno_type = bool
-                        else:
-                            for x in (str, int, float, complex):
-                                if x in get_args(anno_type):
-                                    anno_type = x
-                                    break
-                    args_info[args[i]].data_type = anno_type
-                except KeyError:
-                    # It's okay if the annotation is missing on overridden params
-                    if args_info[args[i]].override is not None:
+        else:
+            for i in range(len(args)):
+                # Skip first arg on methods
+                if inspect.ismethod(func):
+                    if i == 0:
                         continue
-                    raise
+                args_info[args[i]].default = None
+        for i in range(len(args)):
+            arg = args[i]
+            if inspect.ismethod(func):
+                if i == 0:
+                    continue
+            try:
+                anno_type = fas.annotations[arg]
+                if get_origin(anno_type) == Union:
+                    if bool in get_args(anno_type):
+                        anno_type = bool
+                    else:
+                        for x in (str, int, float, complex):
+                            if x in get_args(anno_type):
+                                anno_type = x
+                                break
+                args_info[arg].data_type = anno_type
+            except KeyError:
+                # It's okay if the annotation is missing on overridden params
+                if args_info[arg].override is not None:
+                    continue
+                raise
 
         return_type = None if 'return' not in fas.annotations else fas.annotations['return']
         return_re = re.search(r':return.*?:\s+(.*?)(?::|$)', func.__doc__, re.DOTALL | re.IGNORECASE)

@@ -21,7 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from tkinter import *
+import tkinter as tk
 from tkinter import ttk
 from typing import Union, get_args, get_origin
 from enum import EnumMeta, Enum, IntEnum, Flag, IntFlag
@@ -71,7 +71,7 @@ class ComboBoxBlock(ParamInputFrame):
         """
         super().__init__(parent, entry_description)
         # ComboBox
-        self.selection = StringVar()
+        self.selection = tk.StringVar()
         if type(source) in (list, tuple):
             s = {}
             for item in source:
@@ -134,7 +134,7 @@ class TextInputBlock(ParamInputFrame):
     def __init__(self, parent: ttk.Frame, entry_description: str, entry_default: str = '', entry_type: type = None):
         super().__init__(parent, entry_description)
         # Entry
-        self.entry_text = StringVar()
+        self.entry_text = tk.StringVar()
         self.entry_text.set(entry_default)
         self.entry_type = entry_type
         self.entry = ttk.Entry(self.frame, width=60, textvariable=self.entry_text)
@@ -156,7 +156,7 @@ class BoolInputBlock(ParamInputFrame):
     def __init__(self, parent: ttk.Frame, entry_description: str, entry_default: bool = False):
         super().__init__(parent, entry_description)
         # Checkbox
-        self.checked = BooleanVar()
+        self.checked = tk.BooleanVar()
         self.checked.set(entry_default)
         self.check_box = ttk.Checkbutton(self.frame, variable=self.checked)
 
@@ -187,7 +187,7 @@ class ReturnLabelBlock(ttk.Frame):
         except Exception:
             return_value_text = '<Object>'
         self.return_text = f'{return_value_text}'[:256]
-        self.return_lbl = Text(self.frame, width=60, height=1 + (len(self.return_text)//60))
+        self.return_lbl = tk.Text(self.frame, width=60, height=1 + (len(self.return_text)//60))
         self.return_lbl.insert(1.0, self.return_text)
         self.return_lbl.configure(state='disabled')
         self.grid_items()

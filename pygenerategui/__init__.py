@@ -21,7 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from tkinter import *
+import tkinter as tk
 from tkinter import ttk
 import inspect
 from typing import Union, get_args, get_origin
@@ -58,7 +58,7 @@ class PGGUI_App(ttk.Frame):
     - Footer: Run + Quit buttons
     """
     def __init__(self, components: list, title: str = 'PGGUI App'):
-        root = Tk()
+        root = tk.Tk()
         root.title = title
         super().__init__(root)
         self.pggui_functions = {}

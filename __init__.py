@@ -28,7 +28,6 @@ from typing import Union, get_args, get_origin
 from enum import EnumMeta, Enum, IntEnum, Flag, IntFlag
 import re
 from functools import wraps, partial
-from robot.api.deco import keyword
 
 import pygenerategui.gui_component as gui
 

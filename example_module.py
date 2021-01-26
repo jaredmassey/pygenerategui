@@ -22,24 +22,31 @@
 # SOFTWARE.
 
 from pygenerategui import pggui
+from typing import Union
 
+# example_func will appear in the functions list as 'MyFunc'
+# The z argument will appear as a combobox with 2 options, 'a' and 'b', instead of a text input
+# If the default value of an arg is present in an overridden arg, such as here, it will be set
+#    as the default selection
 @pggui(name="MyFunc", z={'a':17.3, 'b':12.1})
 def example_func(x: str = 'Hello', y: bool = True, z: float = 12.1) -> str:
     """
     A test function
     :param x: The exxxx param
     :param y: The whyyyyyyy param
-    :return: The string 'Heya!'
+    :return: A string showing all values, repeated 10x to test long return values (Should be truncated to 256 chars)
     """
-    return f'x is: {x}, y is: {str(y)}, and z is: {str(z)}'
+    return f'x is: {x}, y is: {str(y)}, and z is: {str(z)}'*10
 
+# If an arg's type hint is a Union, it will be treated as the first of this of the following in the Union:
+# bool, str, int, float, complex
 @pggui
-def example_func2(x: str = 'Purple', y: bool = False, z: float = 99.9) -> str:
+def example_func2(x: str = 'Purple', y: bool = False, z: Union[float, None] = 99.9) -> str:
     """
     Another test function
     :param x: The ECKS param
     :param y: The whyyyyyyy param
-    :return: The string 'Heya!'
+    :return: A string showing all values
     """
     return f'x is: {x}, y is: {str(y)}, and z is: {str(z)}'
 
@@ -68,7 +75,7 @@ class ClassExample:
         A static method, should appear
         :param p1: The first param
         :param p2: The 'nother param
-        :return: Nothing
+        :return: A string showing all values
         """
         return f'p1: {p1}, p2: {p2}'
 
@@ -79,7 +86,7 @@ class ClassExample:
         """
         A class method, should appear
         :param parm: Parmesan is yummy
-        :return: parm + cls.sce_x
+        :return: parm + cls.sce_x (27)
         """
         return parm + cls.sce_x
 
@@ -88,7 +95,7 @@ class ClassExample:
         """
         An instance method, should NOT appear
         :param parm: Parmesan is yummy
-        :return: parm + cls.sce_x
+        :return: parm + cls.sce_x (27)
         """
         return parm + cls.sce_x
 
@@ -109,7 +116,7 @@ class ClassInstanceExample:
         A static method, should appear
         :param p1: The first param
         :param p2: The 'nother param
-        :return: Nothing
+        :return: A string showing all values
         """
         return f'p1: {p1}, p2: {p2}'
 
@@ -129,6 +136,6 @@ class ClassInstanceExample:
         """
         An instance method, should appear
         :param parm: Parmesan is yummy
-        :return: parm + self.ice_y
+        :return: parm + self.ice_y (12 unless you changed it)
         """
         return parm + self.ice_y

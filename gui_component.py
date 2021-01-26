@@ -169,6 +169,40 @@ class BoolInputBlock(ParamInputFrame):
         self.check_box.grid(row=1, column=0, sticky='w')
 
 
+class ReturnLabelBlock(ttk.Frame):
+    def __init__(self, parent: ttk.Frame, return_description: str, return_value = None):
+        super().__init__(parent)
+
+        self.frame = ttk.Frame(parent, borderwidth = 3, relief = 'ridge')
+
+        self.description_lbl = ttk.Label(self.frame, text=return_description, anchor='nw', wraplength=450)
+
+        self.return_value = return_value
+        try:
+            return_value_text = str(return_value)[:256]
+        except Exception:
+            return_value_text = '<Object>'
+        self.return_text = f'{return_value_text}'[:256]
+        self.return_lbl = Text(self.frame, width=60, height=1 + (len(self.return_text)//60))
+        self.return_lbl.insert(1.0, self.return_text)
+        self.return_lbl.configure(state='disabled')
+        self.grid_items()
+
+    def grid_items(self):
+        self.description_lbl.grid(row=0, sticky='w')
+        self.return_lbl.grid(row=1, sticky='w')
+
+    def place(self, row=0, column=0, padx=5, pady=5, sticky='w'):
+        self.frame.grid(row=row, column=column, padx=padx, pady=pady, sticky=sticky)
+
+    def remove(self):
+        self.frame.grid_forget()
+        self.destroy()
+
+    def get_value(self):
+        return self.return_value
+
+
 class ArgInfo:
     """Class for arg info"""
     def __init__(self, name: str = '', description: str = '', data_type: type = None, default = None, override = None):
@@ -188,25 +222,15 @@ class FunctionGUI(ttk.Frame):
         # Entry Label
         self.lbl_func_description = ttk.Label(self.frame, text=func_description, anchor='nw', wraplength=450)
         self.lbl_func_description.grid(row = 0, column = 0, padx = 5, pady = 5, sticky = 'w')
+        self.args_info = args_info
         self.arg_guis = {}  # type: dict[str, ParamInputFrame]
         for arg in args_info:
             if arg == 'return':
                 continue
-            ai = args_info[arg]
-            if ai.override is not None:
-                if type(ai.override in (dict, list, tuple, EnumMeta)):
-                    self.arg_guis[arg] = ComboBoxBlock(parent=self.frame, source=ai.override, default=ai.default,
-                                                       entry_description=f'{ai.name}: {ai.description}')
-                elif callable(ai.override):
-                    # TODO Handle function replacements for args
-                    raise NotImplementedError
-            elif ai.data_type in (int, float, complex, str):
-                self.arg_guis[arg] = TextInputBlock(parent=self.frame, entry_default=ai.default,
-                                                    entry_description=f'{ai.name}: {ai.description}',
-                                                    entry_type=ai.data_type)
-            elif ai.data_type is bool:
-                self.arg_guis[arg] = BoolInputBlock(parent=self.frame, entry_default=bool(ai.default),
-                                                    entry_description=f'{ai.name}: {ai.description}')
+            arg_gui = self.get_arg_input_gui(arg, args_info[arg])
+            if arg_gui is not None:
+                self.arg_guis[arg] = self.get_arg_input_gui(arg, args_info[arg])
+
         # Place function gui + output labels
         n = 1
         for arg in self.arg_guis:
@@ -217,6 +241,23 @@ class FunctionGUI(ttk.Frame):
         n += 1
         self.lbl_error = ttk.Label(self.frame, text = '', anchor='nw', wraplength = 450)
         self.lbl_error.grid(row=n, column=0, padx=5, pady=5, sticky='w')
+
+    def get_arg_input_gui(self, arg: str, arg_info: ArgInfo):
+        if arg_info.override is not None:
+            if type(arg_info.override in (dict, list, tuple, EnumMeta)):
+                 return ComboBoxBlock(parent=self.frame, source=arg_info.override, default=arg_info.default,
+                                                   entry_description=f'{arg_info.name}: {arg_info.description}')
+            elif callable(arg_info.override):
+                # TODO Handle function replacements for args
+                raise NotImplementedError
+        elif arg_info.data_type in (int, float, complex, str):
+            return TextInputBlock(parent=self.frame, entry_default=arg_info.default,
+                                                entry_description=f'{arg_info.name}: {arg_info.description}',
+                                                entry_type=arg_info.data_type)
+        elif arg_info.data_type is bool:
+            return BoolInputBlock(parent=self.frame, entry_default=bool(arg_info.default),
+                                                entry_description=f'{arg_info.name}: {arg_info.description}')
+        else: return None
 
     @staticmethod
     def build_function_gui(parent: ttk.Frame, func):
@@ -238,6 +279,7 @@ class FunctionGUI(ttk.Frame):
 
         # Grab args infos
         for arg in fas.args:
+
             # Name
             args_info[arg] = ArgInfo(name=arg)
             # Description
@@ -268,7 +310,16 @@ class FunctionGUI(ttk.Frame):
                         continue
                 args_info[args[i]].default = defaults[i]
                 try:
-                    args_info[args[i]].data_type = fas.annotations[args[i]]
+                    anno_type = fas.annotations[args[i]]
+                    if get_origin(anno_type) == Union:
+                        if bool in get_args(anno_type):
+                            anno_type = bool
+                        else:
+                            for x in (str, int, float, complex):
+                                if x in get_args(anno_type):
+                                    anno_type = x
+                                    break
+                    args_info[args[i]].data_type = anno_type
                 except KeyError:
                     # It's okay if the annotation is missing on overridden params
                     if args_info[args[i]].override is not None:
@@ -293,9 +344,13 @@ class FunctionGUI(ttk.Frame):
         for arg in self.arg_guis:
             arg_gui = self.arg_guis[arg]
             kwargs[arg] = arg_gui.get_value()
-        try:
-            result = self.func(**kwargs)
-            self.lbl_result['text'] = str(result)
-            return result
-        except Exception as e:
-            self.lbl_error['text'] = f'ERROR: {str(e)}'
+        result = self.func(**kwargs)
+        if 'return' in self.args_info:
+            return_info = self.args_info['return'].description
+            return_text = f'Last Function Returned: {str(type(result))}\n\nReturn Desc: {return_info}'
+        else:
+            return_text = f'Last Function Returned: {str(type(result))}\n'
+        return result, return_text
+
+    def get_value(self):
+        return self.run_function()[0]

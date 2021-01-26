@@ -85,6 +85,7 @@ class PGGUI_App(ttk.Frame):
                 im = dict(inspect.getmembers(c))
                 for m in im:
                     if inspect.isroutine(im[m]):
+                        # Only returns True on bound methods
                         if inspect.ismethod(im[m]):
                             members.append(im[m])
                         elif m in c.__dict__ and type(c.__dict__[m]) is staticmethod:
@@ -104,20 +105,35 @@ class PGGUI_App(ttk.Frame):
 
         # Function GUI
         self.function_frame = ttk.Frame(self)
-        self.function_frame.grid(row=5, column=0, columnspan=999)
+        self.function_frame.grid(row=5, column=0, columnspan=999, sticky='w')
         self.fgui = gui.FunctionGUI.build_function_gui(self.function_frame, self.header.get_value())
         self.fgui.place()
 
         # Footer
+        # Result Display:
+        self.result_frame = ttk.Frame(self)
+        self.result_frame.grid(row=997, column=0, columnspan=999, sticky='w')
+        self.rgui = None
+        # Run Button
+        self.btn_run = ttk.Button(self, text='RUN', command=self.run_function)
+        self.btn_run.grid(row=998, column=999)
         # Quit Button
         self.quit = ttk.Button(self, text="QUIT", command=self.master.destroy)
         self.quit.grid(row=999, column=999)
-        # Run Button
-        self.btn_run = ttk.Button(self, text='RUN', command=self.fgui.run_function)
-        self.btn_run.grid(row=998, column=999)
 
     def combobox_selection_changed(self, value):
         self.fgui.remove()
         self.fgui = gui.FunctionGUI.build_function_gui(self.function_frame, value)
-        self.btn_run['command'] = self.fgui.run_function
+        # self.btn_run['command'] = self.fgui.run_function
         self.fgui.place()
+
+    def run_function(self):
+        try:
+            result = self.fgui.run_function()
+        except Exception as e:
+            result =  None, f'ERROR: {str(e)}'
+        result_gui = gui.ReturnLabelBlock(self.result_frame, result[1], result[0])
+        if self.rgui is not None:
+            self.rgui.remove()
+        self.rgui = result_gui
+        self.rgui.place()

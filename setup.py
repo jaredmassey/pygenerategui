@@ -4,7 +4,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="pygenerategui-jbmassey", # Replace with your own username
+    name="pygenerategui", # Replace with your own username
     version="0.0.7",
     author="Jared Massey",
     author_email="jared@jaredmassey.com",

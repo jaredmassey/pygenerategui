@@ -35,7 +35,7 @@ class PGGUI_App(ttk.Frame):
     """
     def __init__(self, components: list, title: str = 'PGGUI App'):
         root = tk.Tk()
-        root.title = title
+        root.title(title)
         super().__init__(root)
         self.pggui_functions = {}
         function_list = []

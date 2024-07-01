@@ -1,7 +1,7 @@
 # pygenerategui
 Utility for generating simple GUI to execute Python code
 
-This was originally a hobby project, but I realized it could be useful at work. I'm an SDET, and I think this could be a handy way to e.g. expose an existing automation library's functionality to people uncomfortable with scripting. I'm sure it could be valuable in any number of other cases.
+This was originally a hobby project, but I realized it could be useful at work - I think this could be a handy way to e.g. expose an existing automation library's functionality to people uncomfortable with scripting. I'm sure it could be valuable in any number of other cases.
 
 I've chosen the painful option of tkinter for the sake of maximum portability. You shouldn't need any modules that don't come in a typical python install.
 
